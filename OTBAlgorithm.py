@@ -45,6 +45,7 @@ from sextante.otb.OTBUtils import OTBUtils
 from sextante.parameters.ParameterExtent import ParameterExtent
 import xml.etree.ElementTree as ET
 import traceback
+import inspect
 
 class OTBAlgorithm(GeoAlgorithm):
 
@@ -258,4 +259,10 @@ class OTBAlgorithm(GeoAlgorithm):
 
         if not found:
             SextanteLog.addToLog(SextanteLog.LOG_INFO, "Adapter for %s not found" % the_key)
+
+        frames = inspect.getouterframes(inspect.currentframe())[1:]
+        for a_frame in frames:
+            frame,filename,line_number,function_name,lines,index= a_frame
+            SextanteLog.addToLog(SextanteLog.LOG_INFO, "%s %s %s %s %s %s" % (frame,filename,line_number,function_name,lines,index))
+    
         OTBUtils.executeOtb(commands, progress)

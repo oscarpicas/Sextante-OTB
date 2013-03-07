@@ -173,5 +173,8 @@ def defaultWrite(available_app, original_dom_document):
 def defaultSplit(available_app, original_dom_document, parameter):
     the_root = original_dom_document
     splitted = split_by_choice(the_root, parameter)
+    the_list = []
     for key in splitted:
         defaultWrite('%s-%s' % (available_app, key), splitted[key])
+        the_list.append(splitted[key])
+    return the_list

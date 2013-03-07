@@ -1,16 +1,32 @@
 # -*- coding: utf-8 -*-
-# <nbformat>2</nbformat>
+
+"""
+***************************************************************************
+    OTBHelper.py
+***************************************************************************
+*                                                                         *
+*   This program is free software; you can redistribute it and/or modify  *
+*   it under the terms of the GNU General Public License as published by  *
+*   the Free Software Foundation; either version 2 of the License, or     *
+*   (at your option) any later version.                                   *
+*                                                                         *
+***************************************************************************
+"""
 
 import sys
 import os
-sys.path.append('/usr/lib/otb/python')
-sys.path.append('/usr/share/qgis/python/plugins')
-sys.path.append('/home/user/.qgis/python/plugins/sextante/otb/helper')
-sys.path.append('/home/user/.qgis/python/plugins')
+import copy
 
-import otbApplication
+try:
+    import sextante
+except ImportError, e:
+    raise Exception("Sextante must be installed and available in PYTHONPATH")
 
-from generate_application_descriptors import *
+try:
+    import otbApplication
+except ImportError, e:
+    raise Exception("OTB python plugins must be installed and available in PYTHONPATH")
+
 import xml.etree.ElementTree as ET
 import traceback
 
@@ -31,7 +47,16 @@ def opentag(name, c):
     c.append("<%s>" % name)
     yield
 
-def setOtbLog():
+def get_group( appInstance ) :
+    tags = appInstance.GetDocTags()
+    sectionTags = ["Image Manipulation","Vector Data Manipulation", "Calibration","Geometry", "Image Filtering","Feature Extraction","Stereo","Learning","Segmentation"]
+    for sectionTag in sectionTags:
+        for tag in tags:
+            if tag == sectionTag:
+                return sectionTag
+    return "Miscellaneous"
+
+def set_OTB_log():
     import logging
     logger = logging.getLogger('OTBGenerator')
     hdlr = logging.FileHandler('OTBGenerator.log')
@@ -44,7 +69,7 @@ def setOtbLog():
     logger.addHandler(cons)
     logger.setLevel(logging.DEBUG)
 
-def getOtbLog():
+def get_OTB_log():
     import logging
     logger = logging.getLogger('OTBGenerator')
     return logger
@@ -64,40 +89,46 @@ def indent(elem, level=0):
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
 
-setOtbLog()
+set_OTB_log()
 
-import copy
-parameters = { getattr(otbApplication, each): each for each in dir(otbApplication) if 'ParameterType_' in each}
-parameters_clone = copy.deepcopy(parameters)
+def get_parameters():
+    parameters = { getattr(otbApplication, each): each for each in dir(otbApplication) if 'ParameterType_' in each}
+    return parameters
 
-inverted_parameters = { key: value for value, key in parameters.items() }
-inverted_parameters['ParameterType_Radius'] = 1
-inverted_parameters['ParameterType_RAM'] = 1
-inverted_parameters['ParameterType_ComplexInputImage'] = 9
-inverted_parameters['ParameterType_ComplexOutputImage'] = 13
+def get_inverted_parameters():
+    parameters = { getattr(otbApplication, each): each for each in dir(otbApplication) if 'ParameterType_' in each}
+    parameters_clone = copy.deepcopy(parameters)
 
-inverted_parameters_clone = copy.deepcopy(inverted_parameters)
-inverted_parameters_clone['ParameterType_Empty'] = 'ParameterBoolean'
-inverted_parameters_clone['ParameterType_Int'] = 'ParameterNumber'
-inverted_parameters_clone['ParameterType_Float'] = 'ParameterNumber'
-inverted_parameters_clone['ParameterType_String'] = 'ParameterString'
-inverted_parameters_clone['ParameterType_StringList'] = None
-inverted_parameters_clone['ParameterType_InputFilename'] = 'ParameterFile'
-inverted_parameters_clone['ParameterType_OutputFilename'] = 'OutputFile'
-inverted_parameters_clone['ParameterType_Directory'] = 'ParameterFile'
-inverted_parameters_clone['ParameterType_Choice'] = 'ParameterSelection'
-inverted_parameters_clone['ParameterType_InputImage'] = 'ParameterRaster'
-inverted_parameters_clone['ParameterType_InputImageList'] = 'ParameterMultipleInput'
-inverted_parameters_clone['ParameterType_InputVectorData'] = 'ParameterVector'
-inverted_parameters_clone['ParameterType_InputVectorDataList'] = 'ParameterMultipleInput'
-inverted_parameters_clone['ParameterType_OutputImage'] = 'OutputRaster'
-inverted_parameters_clone['ParameterType_OutputVectorData'] = 'OutputVector'
-inverted_parameters_clone['ParameterType_Radius'] = 'ParameterNumber'
-inverted_parameters_clone['ParameterType_Group'] = None
-inverted_parameters_clone['ParameterType_ListView'] = 'ParameterSelection'
-inverted_parameters_clone['ParameterType_ComplexInputImage'] = 'ParameterRaster'
-inverted_parameters_clone['ParameterType_ComplexOutputImage'] = 'OutputRaster'
-inverted_parameters_clone['ParameterType_RAM'] = 'ParameterNumber'
+    inverted_parameters = { key: value for value, key in parameters.items() }
+    inverted_parameters['ParameterType_Radius'] = 1
+    inverted_parameters['ParameterType_RAM'] = 1
+    inverted_parameters['ParameterType_ComplexInputImage'] = 9
+    inverted_parameters['ParameterType_ComplexOutputImage'] = 13
+
+    inverted_parameters_clone = copy.deepcopy(inverted_parameters)
+    inverted_parameters_clone['ParameterType_Empty'] = 'ParameterBoolean'
+    inverted_parameters_clone['ParameterType_Int'] = 'ParameterNumber'
+    inverted_parameters_clone['ParameterType_Float'] = 'ParameterNumber'
+    inverted_parameters_clone['ParameterType_String'] = 'ParameterString'
+    inverted_parameters_clone['ParameterType_StringList'] = None
+    inverted_parameters_clone['ParameterType_InputFilename'] = 'ParameterFile'
+    inverted_parameters_clone['ParameterType_OutputFilename'] = 'OutputFile'
+    inverted_parameters_clone['ParameterType_Directory'] = 'ParameterFile'
+    inverted_parameters_clone['ParameterType_Choice'] = 'ParameterSelection'
+    inverted_parameters_clone['ParameterType_InputImage'] = 'ParameterRaster'
+    inverted_parameters_clone['ParameterType_InputImageList'] = 'ParameterMultipleInput'
+    inverted_parameters_clone['ParameterType_InputVectorData'] = 'ParameterVector'
+    inverted_parameters_clone['ParameterType_InputVectorDataList'] = 'ParameterMultipleInput'
+    inverted_parameters_clone['ParameterType_OutputImage'] = 'OutputRaster'
+    inverted_parameters_clone['ParameterType_OutputVectorData'] = 'OutputVector'
+    inverted_parameters_clone['ParameterType_Radius'] = 'ParameterNumber'
+    inverted_parameters_clone['ParameterType_Group'] = None
+    inverted_parameters_clone['ParameterType_ListView'] = 'ParameterSelection'
+    inverted_parameters_clone['ParameterType_ComplexInputImage'] = 'ParameterRaster'
+    inverted_parameters_clone['ParameterType_ComplexOutputImage'] = 'OutputRaster'
+    inverted_parameters_clone['ParameterType_RAM'] = 'ParameterNumber'
+
+    return inverted_parameters_clone
 
 def retrieve_module_name(param):
     import sextante
@@ -134,8 +165,7 @@ def get_xml_description_from_application_name(our_app, criteria = None):
     group.text = get_group(app_instance)
     desc = ET.SubElement(root, 'description')
     desc.text = app_instance.GetDescription()
-    #html_desc = ET.SubElement(root, 'htmldescription')
-    #html_desc.text = app_instance.GetHtmlExample()
+    
     if not criteria:
         real_criteria = lambda x: True
     else:
@@ -150,7 +180,7 @@ def get_xml_description_from_application_name(our_app, criteria = None):
     for param_key in param_keys:
         get_param_descriptor(app.text, app_instance, param_key, root)
     indent(root)
-    # ET.dump(root)
+    
     return root
 
 def get_the_choices(app_instance, our_descriptor, root):
@@ -160,10 +190,13 @@ def get_the_choices(app_instance, our_descriptor, root):
         choice_node.text = choice
 
 def get_param_descriptor(appkey, app_instance, our_descriptor, root):
-    logger = getOtbLog()
+    logger = get_OTB_log()
+    parameters = get_parameters()
     our_type = parameters[app_instance.GetParameterType(our_descriptor)]
+
+    inverted_parameters = get_inverted_parameters()
     
-    mapped_parameter = inverted_parameters_clone[our_type]
+    mapped_parameter = inverted_parameters[our_type]
     file_parameter = retrieve_module_name(mapped_parameter)
     
     if not file_parameter:
@@ -174,16 +207,16 @@ def get_param_descriptor(appkey, app_instance, our_descriptor, root):
     attrs = {'source_parameter_type' : parameters[app_instance.GetParameterType(our_descriptor)]}
     param_type = ET.SubElement(param, 'parameter_type', attrib = attrs)
 
-    param_type.text = inverted_parameters_clone[parameters[app_instance.GetParameterType(our_descriptor)]]
+    param_type.text = inverted_parameters[parameters[app_instance.GetParameterType(our_descriptor)]]
     
     the_params = get_constructor_parameters_from_filename(file_parameter)
     if len(the_params) == 0:
         if 'Output' in file_parameter:
-            fp = os.path.join(os.path.dirname(file_parameter), 'Output.py')
-            the_params = get_constructor_parameters_from_filename(fp)
+            file_path = os.path.join(os.path.dirname(file_parameter), 'Output.py')
+            the_params = get_constructor_parameters_from_filename(file_path)
         if 'Parameter' in file_parameter:
-            fp = os.path.join(os.path.dirname(file_parameter), 'Parameter.py')
-            the_params = (fp)
+            file_path = os.path.join(os.path.dirname(file_parameter), 'Parameter.py')
+            the_params = (file_path)
     
     if "self" in the_params:
         the_params = the_params[1:]
@@ -253,7 +286,8 @@ def get_param_descriptor(appkey, app_instance, our_descriptor, root):
             if is_choice_type:
                 get_the_choices(app_instance, our_descriptor, node)
 
-def getDefaultParameterValue(app_instance, param):
+def get_default_parameter_value(app_instance, param):
+    parameters = get_parameters()
     try:
         return app_instance.GetParameterAsString(param)
     except:
@@ -267,7 +301,7 @@ def getDefaultParameterValue(app_instance, param):
             default_value = "True"
         return default_value
 
-def fp(par):
+def escape_html(par):
     if 'Int' in par:
         return '&lt;int32&gt;'
     if 'Float' in par:
@@ -291,6 +325,7 @@ def is_a_parameter(app_instance, param):
 
 
 def describe_app(app_instance):
+    parameters = get_parameters()
     result = []
     with tag('html', result):
         with tag('head', result):
@@ -320,11 +355,11 @@ dl { border: 3px double #ccc; padding: 0.5em; } dt { float: left; clear: left; t
                 for param in params:
                     if is_a_parameter(app_instance, param):
                         with tag('li', result):
-                            result.append('<b>%s -%s</b> %s ' % ('[param]', param, fp(parameters[app_instance.GetParameterType(param)])  ))
-                            result.append('%s. Mandatory: %s. Default Value: &quot;%s&quot;' %(app_instance.GetParameterDescription(param), str(app_instance.IsMandatory(param)), getDefaultParameterValue(app_instance, param)))
+                            result.append('<b>%s -%s</b> %s ' % ('[param]', param, escape_html(parameters[app_instance.GetParameterType(param)])  ))
+                            result.append('%s. Mandatory: %s. Default Value: &quot;%s&quot;' %(app_instance.GetParameterDescription(param), str(app_instance.IsMandatory(param)), get_default_parameter_value(app_instance, param)))
                 choices_tags = [each for each in params if (not is_a_parameter(app_instance, each)) and (not '.' in each)]
                 for choice in choices_tags:
-                    result.append('<b>%s -%s</b> %s %s. Mandatory: %s. Default Value: &quot;%s&quot;' % ('[choice]', choice, app_instance.GetParameterDescription(choice), ','.join(app_instance.GetChoiceKeys(choice)), str(app_instance.IsMandatory(choice)), getDefaultParameterValue(app_instance, choice)))
+                    result.append('<b>%s -%s</b> %s %s. Mandatory: %s. Default Value: &quot;%s&quot;' % ('[choice]', choice, app_instance.GetParameterDescription(choice), ','.join(app_instance.GetChoiceKeys(choice)), str(app_instance.IsMandatory(choice)), get_default_parameter_value(app_instance, choice)))
                     choices = app_instance.GetChoiceKeys(choice)
 
                     with tag('ul', result):
@@ -336,7 +371,7 @@ dl { border: 3px double #ccc; padding: 0.5em; } dt { float: left; clear: left; t
                                 for param_tag in param_tags:
                                     with tag('li', result):
                                         result.append('<b>%s -%s</b> ' % ('[param]', param_tag))
-                                        result.append("%s %s. Mandatory: %s. Default Value: &quot;%s&quot;" % ( fp(parameters[app_instance.GetParameterType(param_tag)]) ,app_instance.GetParameterDescription(param_tag), str(app_instance.IsMandatory(param_tag)), getDefaultParameterValue(app_instance, param_tag)))
+                                        result.append("%s %s. Mandatory: %s. Default Value: &quot;%s&quot;" % ( escape_html(parameters[app_instance.GetParameterType(param_tag)]) ,app_instance.GetParameterDescription(param_tag), str(app_instance.IsMandatory(param_tag)), get_default_parameter_value(app_instance, param_tag)))
             with tag('h2', result):
                 result.append('Limitations')
             result.append(app_instance.GetDocLimitations())
@@ -351,6 +386,80 @@ dl { border: 3px double #ccc; padding: 0.5em; } dt { float: left; clear: left; t
             result.append(app_instance.GetHtmlExample())
     return "".join(result)
 
+def get_list_from_node(myet, available_app):
+    all_params = []
+    for parameter in myet.iter('parameter'):
+        rebuild = []
+        par_type = parameter.find('parameter_type').text
+        key = parameter.find('key').text
+        name = parameter.find('name').text
+        source_par_type = parameter.find('parameter_type').attrib['source_parameter_type']
+        rebuild.append(source_par_type)
+        rebuild.append(par_type)
+        rebuild.append(key)
+        rebuild.append(name)
+        for each in parameter[4:]:
+            if not each.tag in ["hidden"]:
+                if len(each.getchildren()) == 0:
+                    if each.tag in ["default"]:
+                        if "-" in available_app:
+                            available_app = available_app.split("-")[0]
+                        app_instance = otbApplication.Registry.CreateApplication(available_app)
+                        rebuild.append(get_default_parameter_value(app_instance, key))
+                    else:
+                        rebuild.append(each.text)
+                else:
+                    rebuild.append([item.text for item in each.iter('choice')])
+        all_params.append(rebuild)
+    return all_params
+
+def adapt_list_to_string(c_list):
+    a_list = c_list[1:]
+    if a_list[0] in ["ParameterVector", "ParameterMultipleInput"]:
+        if c_list[0] == "ParameterType_InputImageList":
+            a_list[3] = 3
+        else:
+            a_list[3] = -1
+
+    if a_list[0] in ["ParameterRaster", "ParameterFile", "ParameterMultipleInput", "OutputRaster", "OutputFile"]:
+        if "Output" in a_list[0]:
+            a_list.append("/tmp/sextante/output.tif")
+        else:
+            import os
+            import sys
+            a_list.append(os.path.join(os.path.abspath(os.curdir), "helper/QB_Toulouse_Ortho_PAN.tif"))
+
+    if a_list[0] in ["ParameterSelection"]:
+        pass
+
+    a_list[1]="-%s" % a_list[1]
+    def mystr(par):
+        if type(par) == type([]):
+            return ";".join(par)
+        return str(par)
+    b_list = map(mystr, a_list)
+    b_list = [b_list[1], b_list[-1]]
+    res = " ".join(b_list)
+    return res
+
+
+def get_automatic_unit_test_from_xml_description(the_root):
+    dom_model = the_root
+
+    try:
+        appkey = dom_model.find('key').text
+        cliName = dom_model.find('exec').text
+        name = dom_model.find('longname').text
+        group = dom_model.find('group').text
+        
+        rebu = get_list_from_node(dom_model, appkey)
+        the_result = map(adapt_list_to_string,rebu)
+        ut_command = cliName + " " + " ".join(the_result)
+        return ut_command
+    except Exception, e:
+        ET.dump(dom_model)
+        raise
+
 if __name__ == "__main__":
     import os
     if not os.path.exists("description"):
@@ -358,18 +467,30 @@ if __name__ == "__main__":
     if not os.path.exists("html"):
         os.mkdir("html")
 
-    logger = getOtbLog()
+    logger = get_OTB_log()
 
     for available_app in otbApplication.Registry.GetAvailableApplications():
         try:
             if 'get%s' % available_app in locals():
                 the_root = get_xml_description_from_application_name(available_app)
-                locals()['get%s' % available_app](available_app, the_root)
+                the_list = locals()['get%s' % available_app](available_app, the_root)
+                if the_list:
+                    for each_dom in the_list:
+                        try:
+                            ut_command = get_automatic_unit_test_from_xml_description(each_dom)
+                        except:
+                            logger.error("Unit test for command %s must be fixed: %s" % (available_app , traceback.format_exc()))
+        
             else:
                 fh = open("description/%s.xml" % available_app, "w")
                 the_root = get_xml_description_from_application_name(available_app)
                 ET.ElementTree(the_root).write(fh)
                 fh.close()
+                try:
+                    ut_command = get_automatic_unit_test_from_xml_description(the_root)
+                except:
+                    logger.error("Unit test for command %s must be fixed: %s" % (available_app , traceback.format_exc()))
+        
         except Exception, e:
             logger.error(traceback.format_exc())
         
@@ -383,6 +504,3 @@ if __name__ == "__main__":
             fh.close()
         except Exception, e:
             logger.error(traceback.format_exc())
-
-
-
