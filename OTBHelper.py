@@ -32,6 +32,7 @@ import traceback
 
 from sextante.otb.OTBSpecific import *
 from contextlib import contextmanager
+import shutil
 
 @contextmanager
 def tag(name, c):
@@ -71,6 +72,9 @@ def set_OTB_log():
 
 def get_OTB_log():
     import logging
+    logger = logging.getLogger('OTBGenerator')
+    if not logger.handlers:
+        set_OTB_log()
     logger = logging.getLogger('OTBGenerator')
     return logger
 
@@ -437,13 +441,17 @@ def adapt_list_to_string(c_list):
         if type(par) == type([]):
             return ";".join(par)
         return str(par)
+
+    if a_list[-1] is None:
+        return ""
+
     b_list = map(mystr, a_list)
     b_list = [b_list[1], b_list[-1]]
     res = " ".join(b_list)
     return res
 
 
-def get_automatic_unit_test_from_xml_description(the_root):
+def get_automatic_ut_from_xml_description(the_root):
     dom_model = the_root
 
     try:
@@ -451,6 +459,9 @@ def get_automatic_unit_test_from_xml_description(the_root):
         cliName = dom_model.find('exec').text
         name = dom_model.find('longname').text
         group = dom_model.find('group').text
+
+        if not cliName.startswith("otbcli_"):
+            raise Exception('Wrong client executable')
         
         rebu = get_list_from_node(dom_model, appkey)
         the_result = map(adapt_list_to_string,rebu)
@@ -477,7 +488,7 @@ if __name__ == "__main__":
                 if the_list:
                     for each_dom in the_list:
                         try:
-                            ut_command = get_automatic_unit_test_from_xml_description(each_dom)
+                            ut_command = get_automatic_ut_from_xml_description(each_dom)
                         except:
                             logger.error("Unit test for command %s must be fixed: %s" % (available_app , traceback.format_exc()))
         
@@ -487,7 +498,7 @@ if __name__ == "__main__":
                 ET.ElementTree(the_root).write(fh)
                 fh.close()
                 try:
-                    ut_command = get_automatic_unit_test_from_xml_description(the_root)
+                    ut_command = get_automatic_ut_from_xml_description(the_root)
                 except:
                     logger.error("Unit test for command %s must be fixed: %s" % (available_app , traceback.format_exc()))
         
@@ -496,7 +507,7 @@ if __name__ == "__main__":
         
     for available_app in otbApplication.Registry.GetAvailableApplications():
         try:
-            fh = open("html/%s.html" % available_app, "w")
+            fh = open("description/doc/%s.html" % available_app, "w")
             app_instance = otbApplication.Registry.CreateApplication(available_app)
             app_instance.UpdateParameters()
             ct = describe_app(app_instance)
@@ -504,3 +515,7 @@ if __name__ == "__main__":
             fh.close()
         except Exception, e:
             logger.error(traceback.format_exc())
+
+    sub_algo = [each for each in os.listdir("description") if "-" in each and ".xml" in each]
+    for key in sub_algo:
+        shutil.copy("description/doc/%s" % key.split("-")[0] + ".html","description/doc/%s" % key.split(".")[0] + ".html")

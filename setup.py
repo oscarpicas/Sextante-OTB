@@ -5,14 +5,15 @@ import sys
 install_requirements = [
         'setuptools>=0.6c11',
         'docutils>=0.8.1',
+        'pyPEG2',
 ]
 
 
 def long_description():
     if sys.version_info >= (3, 0, 0):
-        f = open("README.rst", mode="r", encoding="utf-8")
+        f = open("README.md", mode="r", encoding="utf-8")
     else:
-        f = open("README.rst", mode="r")
+        f = open("README.md", mode="r")
 
     return f.read()
 
