@@ -17,6 +17,7 @@ except ImportError, e:
 
 from sextante.otb.OTBAlgorithm import OTBAlgorithm
 from sextante.otb.OTBHelper import *
+from sextante.otb.OTBTester import *
 
 class AlgoTestCase(unittest.TestCase):
     def setUp(self):
@@ -74,16 +75,17 @@ class AlgoTestCase(unittest.TestCase):
 class TestSequense(unittest.TestCase):
     pass
 
-def test_generator(a_file):
+def test_generator(a_tuple):
     def test(self):
         logger = get_OTB_log()
         
-        content = open(a_file).read()
-        dom_model = ET.fromstring(content)
-
-        ut_command = get_automatic_ut_from_xml_description(dom_model)
+        ut_command = a_tuple[0]
         self.assertTrue(ut_command != None)
         self.assertTrue(ut_command != "")
+
+        ut_command_validation = a_tuple[1]
+        self.assertTrue(ut_command_validation != None)
+        self.assertTrue(ut_command_validation != "")
 
         args = shlex.split(ut_command)
         p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -94,11 +96,11 @@ def test_generator(a_file):
             logger.info(pout)
     return test
 
-
 if __name__ == '__main__':
-    l = [(each, os.path.join(os.path.join(os.path.abspath(os.curdir), 'description'),each)) for each in os.listdir(os.path.join(os.path.abspath(os.curdir), 'description')) if '.xml' in each]
-    for t in l:
-        test_name = 'test_%s' % t[0]
-        test = test_generator(t[1])
+    mkf = MakefileParser()
+    the_tests = mkf.test_algos()
+    for t in the_tests:
+        test_name = 'test_%s' % t
+        test = test_generator(the_tests[t])
         setattr(TestSequense, test_name, test)
     unittest.main()

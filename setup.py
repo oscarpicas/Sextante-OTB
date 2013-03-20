@@ -6,6 +6,8 @@ install_requirements = [
         'setuptools>=0.6c11',
         'docutils>=0.8.1',
         'pyPEG2',
+        'nose',
+        'nose-regression',
 ]
 
 
