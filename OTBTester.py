@@ -26,6 +26,9 @@ class MakefileParser(object):
         self.maxDiff = None
         self.parser = SafeConfigParser()
         self.parser.read('otbcfg.ini')
+        if not os.path.exists('otbcfg.ini'):
+            raise Exception("OTB_SOURCE_DIR and OTB_BINARY_DIR must be specified in the file otbcfg.ini")
+
         self.root_dir = self.parser.get('otb','checkout_dir')
         self.build_dir = self.parser.get('otb','build_dir')
         self.logger = get_OTB_log()
@@ -34,7 +37,7 @@ class MakefileParser(object):
         provided = {}
         provided["OTB_SOURCE_DIR"] = self.root_dir
         provided["OTB_BINARY_DIR"] = self.build_dir
-        provided["OTB_DATA_LARGEINPUT_ROOT"] = os.path.join(self.root_dir, "../OTB-Data/Input")
+        provided["OTB_DATA_LARGEINPUT_ROOT"] = os.path.normpath(os.path.join(self.root_dir, "../OTB-Data/Input"))
 
         try:
             with open(os.path.join(self.root_dir, "CMakeLists.txt")) as file_input:
