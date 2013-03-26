@@ -30,7 +30,11 @@ class MakefileParser(object):
             raise Exception("OTB_SOURCE_DIR and OTB_BINARY_DIR must be specified in the file otbcfg.ini")
 
         self.root_dir = self.parser.get('otb','checkout_dir')
+        if not os.path.exists(self.root_dir):
+            raise Exception("Check otbcfg.ini : OTB_SOURCE_DIR and OTB_BINARY_DIR must be specified there")
         self.build_dir = self.parser.get('otb','build_dir')
+        if not os.path.exists(self.build_dir):
+            raise Exception("Check otbcfg.ini : OTB_SOURCE_DIR and OTB_BINARY_DIR must be specified there")
         self.logger = get_OTB_log()
 
     def test_CMakelists(self):
@@ -54,7 +58,7 @@ class MakefileParser(object):
                 the_strings = set([each.body[-1].contents for each in output if 'Command' in str(type(each)) and "STRING" in each.name.upper()] )
 
                 def mini_clean(item):
-                    if item.startswith('"') and item.endswith('"'):
+                    if item.startswith('"') and item.endswith('"') and " " not in item:
                         return item[1:-1]
                     return item
 
@@ -105,7 +109,7 @@ class MakefileParser(object):
         environment = previous_context
 
         def mini_clean(item):
-            if item.startswith('"') and item.endswith('"'):
+            if item.startswith('"') and item.endswith('"') and " " not in item:
                 return item[1:-1]
             return item
 

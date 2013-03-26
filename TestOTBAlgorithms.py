@@ -27,51 +27,6 @@ class AlgoTestCase(unittest.TestCase):
     def tearDown(self):
         self.logger = None
 
-    def test_description_algorithms_in_xml_files(self):
-        import os
-        xml_files = [os.path.join(os.path.join(os.path.abspath(os.curdir), 'description'),each) for each in os.listdir(os.path.join(os.path.abspath(os.curdir), 'description')) if '.xml' in each]
-        otb_algos = []
-        
-        for a_file in xml_files:
-            try:
-                otb_algo = OTBAlgorithm(a_file)
-                otb_algos.append(otb_algo)
-            except:
-                self.fail("Problem with file %s: %s" % (a_file, traceback.format_exc()))
-
-    def test_exec_of_grayscale(self):
-        import os
-        xml_files = [os.path.join(os.path.join(os.path.abspath(os.curdir), 'description'),each) for each in os.listdir(os.path.join(os.path.abspath(os.curdir), 'description')) if '.xml' in each]
-        xml_files = [each for each in xml_files if "BinaryMorphological" in each]
-        
-        for a_file in xml_files:
-            try:
-                content = open(a_file).read()
-                dom_model = ET.fromstring(content)
-
-                ut_command = get_automatic_ut_from_xml_description(dom_model)
-                self.assertTrue(ut_command != None)
-                self.assertTrue(ut_command != "")
-
-                args = shlex.split(ut_command)
-                p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                (pout, perr) = p.communicate()
-                if "ERROR" in pout:
-                    self.logger.error(pout)
-                else:
-                    self.logger.info(pout)
-            except:
-                self.fail("Problem with file %s: %s" % (a_file, traceback.format_exc()))
-
-    def test_indeed(self):
-        print "Running indeed"
-        print self.the_files
-        for param in self.the_files:
-            try:
-                yield run_it, param
-            except:
-                self.fail("Problem with file %s: %s" % (param, traceback.format_exc()))
-
 class TestSequense(unittest.TestCase):
     pass
 
