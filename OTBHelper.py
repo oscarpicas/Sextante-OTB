@@ -63,7 +63,7 @@ def set_OTB_log():
     hdlr = logging.FileHandler('OTBGenerator.log')
     hdlr.setLevel(logging.DEBUG)
     cons = logging.StreamHandler()
-    cons.setLevel(logging.ERROR)
+    cons.setLevel(logging.CRITICAL)
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
     hdlr.setFormatter(formatter)
     logger.addHandler(hdlr)
@@ -177,6 +177,9 @@ def get_xml_description_from_application_name(our_app, criteria = None):
             raise Exception("criteria parameter must be a valid python callable")
 
         real_criteria = criteria
+
+    if len(our_app) == 0:
+        raise Exception("App name is empty !")
 
     param_keys = [param_key for param_key in app_instance.GetParametersKeys()]
     param_keys = filter(real_criteria, param_keys)

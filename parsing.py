@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+
+"""
+***************************************************************************
+    parsing.py
+***************************************************************************
+*                                                                         *
+*   This program is free software; you can redistribute it and/or modify  *
+*   it under the terms of the GNU General Public License as published by  *
+*   the Free Software Foundation; either version 2 of the License, or     *
+*   (at your option) any later version.                                   *
+*                                                                         *
+***************************************************************************
+"""
+
 from collections import namedtuple
 import re
 import os
@@ -6,24 +21,6 @@ def merge_pairs(list, should_merge, merge):
     """
     Merges adjacent elements of list using the function merge
     if they satisfy the predicate should_merge.
-
-    >>> merge_pairs([], None, None)
-    []
-
-    >>> merge_pairs([1], None, None)
-    [1]
-
-    >>> merge_pairs([1, 2], lambda x, y: False, None)
-    [1, 2]
-
-    >>> merge_pairs([1, 2], lambda x, y: y == x + 1, lambda x, y: (x, y))
-    [(1, 2)]
-
-    >>> merge_pairs([1, 2, 3], lambda x, y: y == x + 1, lambda x, y: (x, y))
-    [(1, 2), 3]
-
-    >>> merge_pairs([1, 2, 3, 4], lambda x, y: y == x + 1, lambda x, y: (x, y))
-    [(1, 2), (3, 4)]
     """
     ret = []
     i = 0

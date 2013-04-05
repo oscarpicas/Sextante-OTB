@@ -1,4 +1,17 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+***************************************************************************
+    OTBTester.py
+***************************************************************************
+*                                                                         *
+*   This program is free software; you can redistribute it and/or modify  *
+*   it under the terms of the GNU General Public License as published by  *
+*   the Free Software Foundation; either version 2 of the License, or     *
+*   (at your option) any later version.                                   *
+*                                                                         *
+***************************************************************************
+"""
 
 import unittest
 import ConfigParser
@@ -32,7 +45,7 @@ class MakefileParser(object):
         self.root_dir = self.parser.get('otb','checkout_dir')
         if not os.path.exists(self.root_dir):
             raise Exception("Check otbcfg.ini : OTB_SOURCE_DIR and OTB_BINARY_DIR must be specified there")
-        self.build_dir = self.parser.get('otb','build_dir')
+        self.build_dir = self.parser.get('otb', 'build_dir')
         if not os.path.exists(self.build_dir):
             raise Exception("Check otbcfg.ini : OTB_SOURCE_DIR and OTB_BINARY_DIR must be specified there")
         self.logger = get_OTB_log()
@@ -149,6 +162,13 @@ class MakefileParser(object):
         otb_apps = [each for each in apps if 'OTB_TEST_APPLICATION' in each.name.upper()]
         return otb_apps
 
+    def get_tests(self, the_makefile, the_dict):
+        input = open(the_makefile).read()
+        output = parse(input)
+        apps = [each for each in output if 'Command' in str(type(each))]
+        otb_tests = [each for each in apps if 'ADD_TEST' in each.name.upper()]
+        return otb_tests
+
     def get_apps_with_context(self, the_makefile, the_dict):
         input = open(the_makefile).read()
         output = parse(input)
@@ -205,6 +225,10 @@ class MakefileParser(object):
                 itemz[last_index].append(each.contents)
         result = []
         result.extend(["otbcli_%s" % each for each in itemz[1]])
+
+        if len(result[0]) == 7:
+            raise Exception("App name is empty !")
+
         result.extend(itemz[2])
         the_string = Template(" ".join(result)).safe_substitute(the_dict)
 
@@ -232,6 +256,10 @@ class MakefileParser(object):
                 itemz[last_index].append(each.contents)
         result = ["otbTestDriver"]
         result.extend(itemz[3])
+
+        if len(result) == 1:
+            return ""
+
         the_string = Template(" ".join(result)).safe_substitute(the_dict)
 
         if '$' in the_string:
@@ -246,7 +274,7 @@ class MakefileParser(object):
                     neo_dict[e.message] = ""
 
         return the_string
-		
+
     def test_algos(self):
         tests = {}
 
@@ -330,7 +358,7 @@ class MakefileParser(object):
                         if '$' in command_line or '$' not in test_line:
                             if '$' in command_line:
                                 self.logger.error(command_line)
-                            if '$'  in test_line:
+                            if '$' in test_line:
                                 self.logger.warning(test_line)
                         else:
                             tests[name_line] = (command_line, test_line)
@@ -386,7 +414,4 @@ def resolve_dict(adia, adib):
         init = len(adia)
         _resolve_dict(adia, adib)
         fin = len(adia)
-
-if __name__ == '__main__':
-    unittest.main()
 
