@@ -24,6 +24,7 @@ from string import Template
 import os
 import traceback
 import logging
+import copy
 
 from ConfigParser import SafeConfigParser
 
@@ -190,8 +191,8 @@ class MakefileParser(object):
         return appz
 
     def get_name_line(self, the_list, the_dict):
-        items = ('NAME', 'APP', 'OPTIONS', 'VALID')
-        itemz = [[], [], [], []]
+        items = ('NAME', 'APP', 'OPTIONS', 'TESTENVOPTIONS', 'VALID')
+        itemz = [[], [], [], [], []]
         last_index = 0
         for each in the_list:
             if each.contents in items:
@@ -202,7 +203,6 @@ class MakefileParser(object):
         the_string = Template(result).safe_substitute(the_dict)
 
         if '$' in the_string:
-            # neo_dict = autoresolve_and_clean(the_dict)
             neo_dict = the_dict
             the_string = Template(the_string).safe_substitute(neo_dict)
             while '$' in the_string:
@@ -212,11 +212,14 @@ class MakefileParser(object):
                     self.logger.warning("Key %s is not found in makefiles" % e.message)
                     neo_dict[e.message] = ""
 
+        if 'string.Template' in the_string:
+            raise Exception("Unexpected toString call in %s" % the_string)
+
         return the_string
 
     def get_command_line(self, the_list, the_dict):
-        items = ('NAME', 'APP', 'OPTIONS', 'VALID')
-        itemz = [[], [], [], []]
+        items = ('NAME', 'APP', 'OPTIONS', 'TESTENVOPTIONS', 'VALID')
+        itemz = [[], [], [], [], []]
         last_index = 0
         for each in the_list:
             if each.contents in items:
@@ -230,10 +233,11 @@ class MakefileParser(object):
             raise Exception("App name is empty !")
 
         result.extend(itemz[2])
+        result.append("-testenv")
+        result.extend(itemz[3])
         the_string = Template(" ".join(result)).safe_substitute(the_dict)
 
         if '$' in the_string:
-            # neo_dict = autoresolve_and_clean(the_dict)
             neo_dict = the_dict
             the_string = Template(" ".join(result)).safe_substitute(neo_dict)
             while '$' in the_string:
@@ -243,11 +247,14 @@ class MakefileParser(object):
                     self.logger.warning("Key %s is not found in makefiles" % e.message)
                     neo_dict[e.message] = ""
 
+        if 'string.Template' in the_string:
+            raise Exception("Unexpected toString call in %s" % the_string)
+
         return the_string
 
     def get_test(self, the_list, the_dict):
-        items = ('NAME', 'APP', 'OPTIONS', 'VALID')
-        itemz = [[], [], [], []]
+        items = ('NAME', 'APP', 'OPTIONS', 'TESTENVOPTIONS', 'VALID')
+        itemz = [[], [], [], [], []]
         last_index = 0
         for each in the_list:
             if each.contents in items:
@@ -255,7 +262,7 @@ class MakefileParser(object):
             else:
                 itemz[last_index].append(each.contents)
         result = ["otbTestDriver"]
-        result.extend(itemz[3])
+        result.extend(itemz[4])
 
         if len(result) == 1:
             return ""
@@ -263,7 +270,6 @@ class MakefileParser(object):
         the_string = Template(" ".join(result)).safe_substitute(the_dict)
 
         if '$' in the_string:
-            # neo_dict = autoresolve_and_clean(the_dict)
             neo_dict = the_dict
             the_string = Template(" ".join(result)).safe_substitute(neo_dict)
             while '$' in the_string:
@@ -272,6 +278,9 @@ class MakefileParser(object):
                 except KeyError, e:
                     self.logger.warning("Key %s is not found in makefiles" % e.message)
                     neo_dict[e.message] = ""
+
+        if 'string.Template' in the_string:
+            raise Exception("Unexpected toString call in %s" % the_string)
 
         return the_string
 
@@ -310,13 +319,17 @@ class MakefileParser(object):
             
             for app, context in appz:
                 if len(context) == 0:
-                    from collections import defaultdict
-                    ddi = defaultdict(lambda:"")
-                    ddi.update(dict_for_algo[makefile])
+                    # from collections import defaultdict
+                    # ddi = defaultdict(lambda:"")
+                    # ddi.update(dict_for_algo[makefile])
+                    import copy
+                    ddi = copy.deepcopy(dict_for_algo[makefile])
+                    tk_dict = autoresolve(ddi)
+                    tk_dict = autoresolve(tk_dict)
 
-                    name_line = self.get_name_line(app.body, ddi)
-                    command_line = self.get_command_line(app.body, ddi)
-                    test_line = self.get_test(app.body, ddi)
+                    name_line = self.get_name_line(app.body, tk_dict)
+                    command_line = self.get_command_line(app.body, tk_dict)
+                    test_line = self.get_test(app.body, tk_dict)
 
                     if '$' in test_line or '$' in command_line:
                         if '$' in command_line:
@@ -347,9 +360,11 @@ class MakefileParser(object):
                         ak_dict = autoresolve(ak_dict)
                         ak_dict = autoresolve(ak_dict)
 
-                        from collections import defaultdict
-                        ddi = defaultdict(lambda:"")
-                        ddi.update(ak_dict)
+                        # from collections import defaultdict
+                        # ddi = defaultdict(lambda:"")
+                        # ddi.update(ak_dict)
+
+                        ddi = ak_dict
 
                         name_line = self.get_name_line(app.body, ddi)
                         command_line = self.get_command_line(app.body, ddi)

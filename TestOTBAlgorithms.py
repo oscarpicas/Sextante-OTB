@@ -20,6 +20,7 @@ import os
 import traceback
 import xml.etree.ElementTree as ET
 import shlex, subprocess
+import shelve
 
 try:
     import sextante
@@ -50,63 +51,79 @@ class AlgoTestCase(unittest.TestCase):
         self.logger = None
 
 class TestSequence(unittest.TestCase):
-    pass
+    def setUp(self):
+        self.data = shelve.open("tests.shelve",writeback=True)
 
-def ut_generator(a_tuple):
+    def tearDown(self):
+        self.data.close()
+
+def ut_generator(test_name, a_tuple):
     def test(self):
         logger = get_OTB_log()
 
-        signal.signal(signal.SIGALRM, alarm_handler)
-        signal.alarm(5*60)  # 5 minutes
+        needs_update = False
+        if test_name not in self.data:
+            needs_update = True
+        if test_name in self.data:
+            if (self.data[test_name][0] != a_tuple[0]) or (self.data[test_name][1] != a_tuple[1]) or (self.data[test_name][2] is False):
+                needs_update = True
 
-        black_list = []
-        
-        ut_command = a_tuple[0]
-        self.assertTrue(ut_command != None)
-        self.assertTrue(ut_command != "")
+        if needs_update:
+            signal.signal(signal.SIGALRM, alarm_handler)
+            signal.alarm(5*60)  # 5 minutes
 
-        ut_command_validation = a_tuple[1]
-        self.assertTrue(ut_command_validation != None)
-        self.assertTrue(ut_command_validation != "")
+            black_list = []
 
-        if ut_command.split(" ")[0] in black_list:
-            raise Exception("Blacklisted test !")
+            ut_command = a_tuple[0]
+            self.assertTrue(ut_command != None)
+            self.assertTrue(ut_command != "")
 
-        args = shlex.split(ut_command)
-        failed = False
-        logger.info("Running [%s]" % ut_command)
-        p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (pout, perr) = p.communicate()
-        if ("ERROR" in pout or "ERROR" in perr) or ("FATAL" in pout or "FATAL" in perr) or ("CRITICAL" in pout or "CRITICAL" in perr):
-            error_text = "Command [%s] returned [%s]" % (ut_command, pout)
-            if "Invalid image filename" in pout or "Invalid vector data filename" in pout or "Failed to open" in pout:
-                logger.error(error_text)
-            else:
-                logger.error(error_text)
-                self.fail(error_text)
-            failed = True
-        else:
-            logger.info(pout)
+            ut_command_validation = a_tuple[1]
+            self.assertTrue(ut_command_validation != None)
+            self.assertTrue(ut_command_validation != "")
 
-        if (len(ut_command_validation) > 0) and not failed:
-            new_ut_command_validation = ut_command_validation + " Execute " +  ut_command
+            if ut_command.split(" ")[0] in black_list:
+                raise Exception("Blacklisted test !")
 
-            logger.info("Running Unit test [%s]" % new_ut_command_validation)
-            argz = shlex.split(new_ut_command_validation)
-            q = subprocess.Popen(argz, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            (qout, qerr) = q.communicate()
-
-            if not ("Test EXIT SUCCESS" in qout or "Test EXIT SUCCESS" in qerr):
-                error_text = "Unit test [%s] returned [%s]" % (new_ut_command_validation, qout)
-                if "Invalid image filename" in qout or "Invalid vector data filename" in qout or "Failed to open" in qout:
-                    logger.error(error_text)
+            args = shlex.split(ut_command)
+            failed = False
+            logger.info("Running [%s]" % ut_command)
+            p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            (pout, perr) = p.communicate()
+            if ("ERROR" in pout or "ERROR" in perr) or ("FATAL" in pout or "FATAL" in perr) or ("CRITICAL" in pout or "CRITICAL" in perr):
+                error_text = "Command [%s] returned [%s]" % (ut_command, pout)
+                if "Invalid image filename" in pout or "Invalid vector data filename" in pout or "Failed to open" in pout:
+                    logger.warning(error_text)
                 else:
                     logger.error(error_text)
                     self.fail(error_text)
+                failed = True
             else:
-                logger.info(qout)
+                logger.info(pout)
 
-        signal.alarm(0)
+            if (len(ut_command_validation) > 0) and not failed:
+                new_ut_command_validation = ut_command_validation + " Execute " +  ut_command
+
+                logger.info("Running Unit test [%s]" % new_ut_command_validation)
+                argz = shlex.split(new_ut_command_validation)
+                q = subprocess.Popen(argz, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                (qout, qerr) = q.communicate()
+
+                if not ("Test EXIT SUCCESS" in qout or "Test EXIT SUCCESS" in qerr):
+                    error_text = "Unit test [%s] returned [%s]" % (new_ut_command_validation, qout)
+                    if "Invalid image filename" in qout or "Invalid vector data filename" in qout or "Failed to open" in qout:
+                        logger.warning(error_text)
+                    else:
+                        logger.error(error_text)
+                        self.fail(error_text)
+                else:
+                    logger.info(qout)
+
+            signal.alarm(0)
+            self.data[test_name] = [ a_tuple[0], a_tuple[1], failed ]
+        else:
+            logger.info("Passed test: %s" % test_name)
+
 
     return test
 
@@ -124,7 +141,7 @@ def unfiltered_sextante_mapping():
     the_tests = mkf.test_algos()
     for t in the_tests:
         test_name = 'test_std_%s' % t
-        test = ut_generator(the_tests[t])
+        test = ut_generator(test_name, the_tests[t])
         setattr(TestSequence, test_name, test)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSequence)
@@ -137,8 +154,16 @@ def test_sextante_mapping():
     for t in the_tests:
         test_name = 'test_%s' % t
         if the_tests[t][0].split(" ")[0] in clients:
-            test = ut_generator(the_tests[t])
-            setattr(TestSequence, test_name, test)
+            skip = False
+            if the_tests[t][1] is None:
+                skip = True
+            else:
+                if the_tests[t][1] == "":
+                    skip = True
+
+            if not skip:
+                test = ut_generator(test_name, the_tests[t])
+                setattr(TestSequence, test_name, test)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSequence)
     unittest.TextTestRunner(verbosity=2).run(suite)
@@ -149,6 +174,6 @@ if __name__ == '__main__':
     the_tests = mkf.test_algos()
     for t in the_tests:
         test_name = 'test_%s' % t
-        test = ut_generator(the_tests[t])
+        test = ut_generator(test_name, the_tests[t])
         setattr(TestSequence, test_name, test)
     unittest.main()
