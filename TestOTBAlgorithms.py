@@ -51,6 +51,10 @@ class AlgoTestCase(unittest.TestCase):
         self.logger = None
 
 class TestSequence(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.already_tested = set()
+
     def setUp(self):
         self.data = shelve.open("tests.shelve",writeback=True)
 
@@ -70,7 +74,7 @@ def ut_generator(test_name, a_tuple):
 
         if needs_update:
             signal.signal(signal.SIGALRM, alarm_handler)
-            signal.alarm(5*60)  # 5 minutes
+            signal.alarm(6*60)  # 6 minutes
 
             black_list = []
 
@@ -141,8 +145,15 @@ def unfiltered_sextante_mapping():
     the_tests = mkf.test_algos()
     for t in the_tests:
         test_name = 'test_std_%s' % t
-        test = ut_generator(test_name, the_tests[t])
-        setattr(TestSequence, test_name, test)
+        if the_tests[t][1] is None:
+            skip = True
+        else:
+            if the_tests[t][1] == "":
+                skip = True
+
+        if not skip:
+            test = ut_generator(test_name, the_tests[t])
+            setattr(TestSequence, test_name, test)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSequence)
     unittest.TextTestRunner(verbosity=2).run(suite)
@@ -151,6 +162,9 @@ def test_sextante_mapping():
     mkf = MakefileParser()
     the_tests = mkf.test_algos()
     clients = get_client_apps()
+
+    already_tested = set()
+
     for t in the_tests:
         test_name = 'test_%s' % t
         if the_tests[t][0].split(" ")[0] in clients:
@@ -162,8 +176,11 @@ def test_sextante_mapping():
                     skip = True
 
             if not skip:
-                test = ut_generator(test_name, the_tests[t])
-                setattr(TestSequence, test_name, test)
+                runnable = the_tests[t][0].split(" ")[0]
+                if runnable not in already_tested:
+                    test = ut_generator(test_name, the_tests[t])
+                    setattr(TestSequence, test_name, test)
+                    already_tested.add(runnable)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSequence)
     unittest.TextTestRunner(verbosity=2).run(suite)

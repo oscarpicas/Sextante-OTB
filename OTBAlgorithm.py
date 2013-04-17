@@ -244,18 +244,20 @@ class OTBAlgorithm(GeoAlgorithm):
             progress.setCommand(line)
 
         SextanteLog.addToLog(SextanteLog.LOG_INFO, loglines)
-        from sextante.otb.OTBSpecific import *
+        import sextante.otb.OTBSpecific
+        module = sextante.otb.OTBSpecific
+
         found = False
-        if 'adapt%s' % self.appkey in locals():
+        if 'adapt%s' % self.appkey in dir(module):
             found = True
-            commands = locals()['adapt%s' % self.appkey](commands)
+            commands = getattr(module, 'adapt%s' % self.appkey)(commands)
         else:
             the_key = 'adapt%s' % self.appkey
             if '-' in the_key:
                 base_key = the_key.split("-")[0]
-                if base_key in locals():
+                if base_key in dir(module):
                     found = True
-                    commands = locals()[base_key](commands)
+                    commands = getattr(module, base_key)(commands)
 
         if not found:
             SextanteLog.addToLog(SextanteLog.LOG_INFO, "Adapter for %s not found" % the_key)
