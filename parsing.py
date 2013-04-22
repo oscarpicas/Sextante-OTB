@@ -13,6 +13,9 @@
 ***************************************************************************
 """
 
+# This will get replaced with a git SHA1 when you do a git archive
+__revision__ = '$Format:%H$'
+
 from collections import namedtuple
 import re
 import os
@@ -43,15 +46,6 @@ _Command = namedtuple('Command', 'name body comment')
 BlankLine = namedtuple('BlankLine', '')
 
 class File(list):
-    """Top node of the syntax tree for a CMakeLists file."""
-
-    def __str__(self):
-        '''
-        Returns the pretty-print string for tree
-        with indentation given by the string tab.
-        '''
-        return '\n'.join(compose_lines(self)) + '\n'
-
     def __repr__(self):
         return 'File(' + repr(list(self)) + ')'
 
@@ -85,49 +79,6 @@ def parse(s):
     nums_items = attach_comments_to_commands(nums_items)
     items = [item for _, item in nums_items]
     return File(items)
-
-def strip_blanks(tree):
-    return File([x for x in tree if not isinstance(x, BlankLine)])
-
-def compose_lines(tree, max_width=79):
-    """
-    Yields pretty-printed lines of a CMakeLists file.
-    """
-    tab = '\t'
-    level = 0
-    for item in tree:
-        if isinstance(item, (Comment, str)):
-            yield level * tab + item
-        elif isinstance(item, BlankLine):
-            yield ''
-        elif isinstance(item, _Command):
-            name = item.name.lower()
-            if name in ('endfunction', 'endmacro', 'endif', 'else', 'endforeach'):
-                level -= 1
-            for i, line in enumerate(command_to_lines(item)):
-                offset = 1 if i > 0 else 0
-                line2 = (level + offset) * tab + line
-                if len(line2) <= max_width:
-                    yield line2
-                else:
-                    command_to_lines
-                    # Line is too long. Try again.
-                    for _, (ty, contents) in tokenize(line):
-                        yield (level + offset) * tab + contents
-
-            if name in ('function', 'macro', 'if', 'else', 'foreach'):
-                level += 1
-
-# FIXME: Make this split into more lines if the result would be too wide.
-def command_to_lines(cmd, sep=os.linesep):
-    final_paren = ')' if cmd.body and cmd.body[-1].comments else ')'
-    comment_part = '  ' + cmd.comment if cmd.comment else ''
-    result = cmd.name + '(' + sep.join(map(arg_to_str, cmd.body)) + final_paren + comment_part
-    return [l.strip() for l in result.splitlines()]
-
-def arg_to_str(arg):
-    comment_part = '  ' + '\n'.join(arg.comments) + '\n' if arg.comments else ''
-    return arg.contents + comment_part
 
 def parse_file(toks):
     '''
@@ -191,7 +142,6 @@ def expect(expected_type, toks):
         raise CMakeParseError(msg)
 
 # http://stackoverflow.com/questions/691148/pythonic-way-to-implement-a-tokenizer
-# TODO: Handle multiline strings.
 scanner = re.Scanner([
     (r'#.*',                lambda scanner, token: ("comment", token)),
     (r'"[^"]*"',            lambda scanner, token: ("string", token)),

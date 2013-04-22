@@ -13,6 +13,9 @@
 ***************************************************************************
 """
 
+# This will get replaced with a git SHA1 when you do a git archive
+__revision__ = '$Format:%H$'
+
 import sys
 import os
 import copy
@@ -474,7 +477,7 @@ def get_automatic_ut_from_xml_description(the_root):
         ET.dump(dom_model)
         raise
 
-if __name__ == "__main__":
+def create_xml_descriptors():
     import os
     if not os.path.exists("description"):
         os.mkdir("description")
@@ -522,3 +525,6 @@ if __name__ == "__main__":
     sub_algo = [each for each in os.listdir("description") if "-" in each and ".xml" in each]
     for key in sub_algo:
         shutil.copy("description/doc/%s" % key.split("-")[0] + ".html","description/doc/%s" % key.split(".")[0] + ".html")
+
+if __name__ == "__main__":
+    create_xml_descriptors()

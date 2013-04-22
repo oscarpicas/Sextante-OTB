@@ -13,6 +13,9 @@
 ***************************************************************************
 """
 
+# This will get replaced with a git SHA1 when you do a git archive
+__revision__ = '$Format:%H$'
+
 import unittest
 import ConfigParser
 import io
@@ -319,9 +322,6 @@ class MakefileParser(object):
             
             for app, context in appz:
                 if len(context) == 0:
-                    # from collections import defaultdict
-                    # ddi = defaultdict(lambda:"")
-                    # ddi.update(dict_for_algo[makefile])
                     import copy
                     ddi = copy.deepcopy(dict_for_algo[makefile])
                     tk_dict = autoresolve(ddi)
@@ -360,10 +360,6 @@ class MakefileParser(object):
                         ak_dict = autoresolve(ak_dict)
                         ak_dict = autoresolve(ak_dict)
 
-                        # from collections import defaultdict
-                        # ddi = defaultdict(lambda:"")
-                        # ddi.update(ak_dict)
-
                         ddi = ak_dict
 
                         name_line = self.get_name_line(app.body, ddi)
@@ -377,9 +373,7 @@ class MakefileParser(object):
                                 self.logger.warning(test_line)
                         else:
                             tests[name_line] = (command_line, test_line)
-        
-        # import pprint
-        # pprint.pprint(tests)
+
         return tests
 
 def autoresolve(a_dict):

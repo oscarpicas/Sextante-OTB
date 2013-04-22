@@ -13,6 +13,9 @@
 ***************************************************************************
 """
 
+# This will get replaced with a git SHA1 when you do a git archive
+__revision__ = '$Format:%H$'
+
 import unittest
 import signal
 import sys
@@ -51,10 +54,6 @@ class AlgoTestCase(unittest.TestCase):
         self.logger = None
 
 class TestSequence(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.already_tested = set()
-
     def setUp(self):
         self.data = shelve.open("tests.shelve",writeback=True)
 
@@ -184,6 +183,9 @@ def test_sextante_mapping():
 
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSequence)
     unittest.TextTestRunner(verbosity=2).run(suite)
+
+def test_xml_generation():
+    create_xml_descriptors()
 
 if __name__ == '__main__':
     import sextante
