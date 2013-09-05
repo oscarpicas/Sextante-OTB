@@ -15,6 +15,7 @@
 
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
+__version__ = "3.8"
 
 import sys
 import os
@@ -248,23 +249,24 @@ def get_param_descriptor(appkey, app_instance, our_descriptor, root):
             optional.text = str(not app_instance.IsMandatory(our_descriptor))
         elif each == "default":
             done = False
+            reason = []
             try:
                 default_value = str(app_instance.GetParameterAsString(our_descriptor))
                 done = True
             except:
-                logger.debug(traceback.format_exc())
+                reason.append(traceback.format_exc())
             if not done:
                 try:
                     default_value = str(app_instance.GetParameterFloat(our_descriptor))
                     done = True
                 except:
-                    logger.debug(traceback.format_exc())
+                    reason.append(traceback.format_exc())
             if not done:
                 try:
                     default_value = str(app_instance.GetParameterInt(our_descriptor))
                     done = True
                 except:
-                    logger.debug(traceback.format_exc())
+                    reason.append(traceback.format_exc())
 
             if done:
                 default = ET.SubElement(param, 'default')
@@ -277,7 +279,7 @@ def get_param_descriptor(appkey, app_instance, our_descriptor, root):
                     else:
                         default.text = ''
             else:
-                logger.warning("A parameter transformation may fail: for %s, %s, type %s!" % (appkey, our_descriptor, parameters[app_instance.GetParameterType(our_descriptor)]))
+                logger.debug("A parameter transformation failed, trying default values : for %s, %s, type %s!, conversion message: %s" % (appkey, our_descriptor, parameters[app_instance.GetParameterType(our_descriptor)], str(reason)))
                 the_type = parameters[app_instance.GetParameterType(our_descriptor)]
                 if the_type == "ParameterType_Int":
                     default_value = "0"
@@ -286,7 +288,7 @@ def get_param_descriptor(appkey, app_instance, our_descriptor, root):
                 elif the_type == "ParameterType_Empty":
                     default_value = "True"
                 else:
-                    raise Exception("Unable to adapt %s, %s, %s" % (appkey, our_descriptor, parameters[app_instance.GetParameterType(our_descriptor)]))
+                    raise Exception("Unable to adapt %s, %s, %s, conversion message: %s" % (appkey, our_descriptor, parameters[app_instance.GetParameterType(our_descriptor)], str(reason)))
 
                 default = ET.SubElement(param, 'default')
                 default.text = default_value
@@ -477,6 +479,24 @@ def get_automatic_ut_from_xml_description(the_root):
         ET.dump(dom_model)
         raise
 
+def list_reader(file_name, version):
+    tree = ET.parse(file_name)
+    root = tree.getroot()
+    nodes = [each.text for each in root.findall("./version[@id='%s']/app_name" % version)]
+    return nodes
+
+def get_otb_version():
+    #TODO Find a way to retrieve installed otb version, force exception and parse otb-X.XX.X ?
+    return "3.18"
+
+def get_white_list():
+    nodes = list_reader("white_list.xml",get_otb_version())
+    return nodes
+
+def get_black_list():
+    nodes = list_reader("black_list.xml",get_otb_version())
+    return nodes
+
 def create_xml_descriptors():
     import os
     if not os.path.exists("description"):
@@ -486,27 +506,37 @@ def create_xml_descriptors():
 
     logger = get_OTB_log()
 
+    white_list = get_white_list()
+    black_list = get_black_list()
+
+    from sextante.otb.OTBSpecific import *
     for available_app in otbApplication.Registry.GetAvailableApplications():
         try:
             if 'get%s' % available_app in locals():
-                the_root = get_xml_description_from_application_name(available_app)
-                the_list = locals()['get%s' % available_app](available_app, the_root)
-                if the_list:
-                    for each_dom in the_list:
-                        try:
-                            ut_command = get_automatic_ut_from_xml_description(each_dom)
-                        except:
-                            logger.error("Unit test for command %s must be fixed: %s" % (available_app , traceback.format_exc()))
+                if available_app in white_list and not available_app in black_list:
+                    the_root = get_xml_description_from_application_name(available_app)
+                    the_list = locals()['get%s' % available_app](available_app, the_root)
+                    if the_list:
+                        for each_dom in the_list:
+                            try:
+                                ut_command = get_automatic_ut_from_xml_description(each_dom)
+                            except:
+                                logger.error("Unit test for command %s must be fixed: %s" % (available_app , traceback.format_exc()))
+                else:
+                    logger.warning("%s is not in white list." % available_app)
         
             else:
-                fh = open("description/%s.xml" % available_app, "w")
-                the_root = get_xml_description_from_application_name(available_app)
-                ET.ElementTree(the_root).write(fh)
-                fh.close()
-                try:
-                    ut_command = get_automatic_ut_from_xml_description(the_root)
-                except:
-                    logger.error("Unit test for command %s must be fixed: %s" % (available_app , traceback.format_exc()))
+                if available_app in white_list and not available_app in black_list:
+                    logger.warning("There is no adaptor for %s, check white list and versions" % available_app)
+                    # TODO Remove this default code when all apps are tested...
+                    fh = open("description/%s.xml" % available_app, "w")
+                    the_root = get_xml_description_from_application_name(available_app)
+                    ET.ElementTree(the_root).write(fh)
+                    fh.close()
+                    try:
+                        ut_command = get_automatic_ut_from_xml_description(the_root)
+                    except:
+                        logger.error("Unit test for command %s must be fixed: %s" % (available_app , traceback.format_exc()))
         
         except Exception, e:
             logger.error(traceback.format_exc())

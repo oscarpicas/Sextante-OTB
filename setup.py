@@ -7,7 +7,6 @@ import sys
 install_requirements = [
         'setuptools>=0.6c11',
         'docutils>=0.8.1',
-        'pyPEG2',
         'nose',
         'nose-regression',
 ]
@@ -28,7 +27,7 @@ setup(
     url='https://github.com/oscarpicas/Sextante-OTB/',
     license='GNU General Public License v2 (GPLv2)',
     author=sextante-otb.__author__,
-    author_email='oscar.picas@gmail.com',
+    author_email='oscar.picas-puig@c-s.fr',
     description='OTB interface to sextante library.',
     long_description=long_description(),
     keywords='sextante, otb',

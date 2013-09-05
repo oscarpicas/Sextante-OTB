@@ -15,6 +15,7 @@
 
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
+__version__ = "3.8"
 
 import sys
 
